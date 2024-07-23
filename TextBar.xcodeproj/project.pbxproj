@@ -5306,10 +5306,7 @@
 			baseConfigurationReference = E028447CD5F3573E26D30873 /* Pods-TextBar.debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = YES;
-				ARCHS = (
-					i386,
-					x86_64,
-				);
+				ARCHS = "$(ARCHS_STANDARD)";
 				CODE_SIGN_ENTITLEMENTS = TextBar/TextBar.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
@@ -5336,7 +5333,7 @@
 					"$(PROJECT_DIR)/Libraries",
 					"$(PROJECT_DIR)/TextBar",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				MACOSX_DEPLOYMENT_TARGET = 14.2;
 				MARKETING_VERSION = 6.0.0;
 				OTHER_LDFLAGS = (
 					"-ObjC",
@@ -5356,10 +5353,7 @@
 			baseConfigurationReference = 3F4D2DCCFEFA2EDA9B3C0011 /* Pods-TextBar.release.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = YES;
-				ARCHS = (
-					i386,
-					x86_64,
-				);
+				ARCHS = "$(ARCHS_STANDARD)";
 				CODE_SIGN_ENTITLEMENTS = TextBar/TextBar.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
@@ -5386,7 +5380,7 @@
 					"$(PROJECT_DIR)/Libraries",
 					"$(PROJECT_DIR)/TextBar",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				MACOSX_DEPLOYMENT_TARGET = 14.2;
 				MARKETING_VERSION = 6.0.0;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_LDFLAGS = (

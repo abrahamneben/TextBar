@@ -9,7 +9,7 @@ DEPENDENCIES:
   - MASShortcut
 
 SPEC REPOS:
-  https://github.com/CocoaPods/Specs.git:
+  trunk:
     - GCDWebServer
     - MASShortcut
 
@@ -19,4 +19,4 @@ SPEC CHECKSUMS:
 
 PODFILE CHECKSUM: 782bbd99e3e834750c9f55056a6beb2427cdb564
 
-COCOAPODS: 1.10.2
+COCOAPODS: 1.15.2
