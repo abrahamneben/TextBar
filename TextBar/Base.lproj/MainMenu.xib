@@ -867,7 +867,7 @@
                                                                 </textFieldCell>
                                                                 <tableColumnResizingMask key="resizingMask" resizeWithTable="YES" userResizable="YES"/>
                                                                 <connections>
-                                                                    <binding destination="KLm-Fd-iFJ" name="value" keyPath="arrangedObjects.refreshSeconds" id="dXl-uF-eIs">
+                                                                    <binding destination="KLm-Fd-iFJ" name="value" keyPath="arrangedObjects.refreshMs" id="dXl-uF-eIs">
                                                                         <dictionary key="options">
                                                                             <string key="NSValueTransformerName">RSNumberTransformer</string>
                                                                         </dictionary>
@@ -1137,7 +1137,7 @@
                                                     <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="rKG-PC-Ubg">
                                                         <rect key="frame" x="202" y="273" width="169" height="17"/>
                                                         <autoresizingMask key="autoresizingMask" flexibleMinX="YES" flexibleMinY="YES"/>
-                                                        <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="seconds (0 = don't refresh)" id="o8w-zT-trl">
+                                                        <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="ms (0 = don't refresh)" id="o8w-zT-trl">
                                                             <font key="font" metaFont="system"/>
                                                             <color key="textColor" name="secondaryLabelColor" catalog="System" colorSpace="catalog"/>
                                                             <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
@@ -1181,7 +1181,7 @@
                                                             <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
                                                         </textFieldCell>
                                                         <connections>
-                                                            <binding destination="KLm-Fd-iFJ" name="value" keyPath="selection.refreshSeconds" id="oAq-RJ-sw6">
+                                                            <binding destination="KLm-Fd-iFJ" name="value" keyPath="selection.refreshMs" id="oAq-RJ-sw6">
                                                                 <dictionary key="options">
                                                                     <string key="NSValueTransformerName">RSNumberTransformer</string>
                                                                 </dictionary>
@@ -2309,7 +2309,7 @@ DQ
             <declaredKeys>
                 <string>imageNamed</string>
                 <string>script</string>
-                <string>refreshSeconds</string>
+                <string>refreshMs</string>
                 <string>isEnabled</string>
                 <string>imageNamedAttributed</string>
             </declaredKeys>

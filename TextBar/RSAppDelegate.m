@@ -41,23 +41,23 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
 - (id)init {
     if (self = [super init]) {
         _options = [RSTextBarOptions instance];
-        
+
         _defaultAdditionalImagesFolder = @"";
-        
+
         _textBarScriptQueue = [[NSOperationQueue alloc] init];
         _textBarScriptQueue.maxConcurrentOperationCount = 10;
-        
+
         _textBarItems = [NSMutableArray array];
         _textBarItemsAlt = [NSMutableArray array];
-        
+
         _imageCache = [[NSCache alloc] init];
-        
+
         _defaultANSIEscaper = [[AMR_ANSIEscapeHelper alloc] init];
         _itemANSIEscaper = [[AMR_ANSIEscapeHelper alloc] init];
         _highlightedItemANSIEscaper = [[AMR_ANSIEscapeHelper alloc] init];
-        
+
         _filesToOpen = [NSMutableSet set];
-        
+
         // We have to do this before the xib loads - as there is data binding!
         NSNumber* defaultAllImages = [[NSUserDefaults standardUserDefaults] objectForKey:@"DefaultAllImages"];
         if ( defaultAllImages && [defaultAllImages boolValue] ) {
@@ -65,14 +65,14 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
         } else {
             _textBarImages = [RSTextBarImages defaultImages];
         }
-        
+
         NSString* defaultAdditionalImagesFolder = [[NSUserDefaults standardUserDefaults] objectForKey:@"DefaultAdditionalImagesFolder"];
         if ( 0 < [defaultAdditionalImagesFolder length] ) {
             [self additionalImages:defaultAdditionalImagesFolder];
         }
-        
+
         _textBarActions = @[kActionClipboard, kActionScript];
-        
+
         _proxySettings = [Helpers getProxySettings];
     }
     return self;
@@ -81,7 +81,7 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
 //-------------------------------------------------------------------------//
 - (void)application:(NSApplication *)sender openFiles:(NSArray *)filenames {
     NSLog(@"OpenFiles: %@", filenames);
-    
+
     // RichS: 2017.10.29 - For some (stupid) reason, sometimes Apple sends up the same file multiple files.
     // We mitigate this by using a set and opening after a slight delay (which is long enough to eliminate the duplicates)
     [self.filesToOpen addObjectsFromArray:filenames];
@@ -93,24 +93,24 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     NSString* filename = [self.filesToOpen anyObject];
     if (nil != filename) {
         [self.filesToOpen removeObject:filename];
-        
+
         if (![NSString isEmpty:filename]) {
             RSTextBarItem* importItem = [NSKeyedUnarchiver unarchiveObjectWithFile:filename];
             if ( nil == importItem ) {
                 [self showMessageSheetWithTitle:@"Import into TextBar failed" andMessage:@"This is not a valid TextBar file."];
                 return;
             }
-            
+
             NSString* importDescription = @"Import TextBar item?";
             if (![NSString isEmpty:importItem.name]) {
                 importDescription = [NSString stringWithFormat:@"Import '%@' into TextBar?", importItem.name];
             }
-            
+
             self.textBarItemImport.messageTitle.stringValue = importDescription;
-            
+
             // Force show the Preferences UI - so we can anchor to it.
             [self actionPreferences:nil];
-            
+
             [self.window beginSheet:self.textBarItemImport  completionHandler:^(NSModalResponse returnCode) {
                 if (NSModalResponseOK == returnCode) {
                     if ([importItem processFromImport]) {
@@ -119,12 +119,12 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
                         // TODO: Error importing item
                     }
                 }
-                
+
                 // Run again for multiple items
                 [self performSelector:@selector(openQueuedFiles) withObject:nil afterDelay:0.5];
             }];
         }
-        
+
         [self updateTextBarItemController];
         [self writePreferences];
     }
@@ -138,7 +138,7 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
 
 //-------------------------------------------------------------------------//
 - (void)openDocumentWithContentsOfURL:(NSURL *)url display:(BOOL)displayDocument completionHandler:(void (^)(NSDocument * _Nullable, BOOL, NSError * _Nullable))completionHandler {
-    
+
     //if (doOpenDocument) {
     //    [super openDocumentWithContentsOfURL:url display:displayDocument completionHandler:completionHandler];
     //} else {
@@ -179,7 +179,7 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
 //-------------------------------------------------------------------------//
 -(void)initialiseApp {
     _showMenuOnAll = YES;
-    
+
     [self initialiseTransformers];
     [self initialiseMainMenuBar];
     [self initialiseSubscriptions];
@@ -188,31 +188,31 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     [self registerFontHandler];
     [self readPreferences];
     [self defaultPreferences];
-    
+
     [self.textBarItemsTable registerForDraggedTypes:@[MyPrivateTableViewDataType]];
     [self.textBarItems2Table registerForDraggedTypes:@[MyPrivateTableViewDataType]];
-    
+
     // Fix to prevent white text when selected (hence white on white)
     [self.textBarItemsTable setSelectionHighlightStyle:NSTableViewSelectionHighlightStyleNone];
-    
+
     // This should work better, but, created a judder when trying to find a drop position.
     //[self.textBarItemsTable setDraggingDestinationFeedbackStyle:NSTableViewDraggingDestinationFeedbackStyleGap];
-    
+
     [[self.textBarPreferencesNews mainFrame] loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:self.options.newsURL]]];
     NSString* appVersion = [NSString stringWithFormat:@"Version %@",[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"]];
     self.textBarPreferencesVersion.stringValue = [NSString stringWithFormat:@"You are using TextBar %@", appVersion];
-    
+
     [self addObservers];
-    
+
     // As we can't create a binding in IB (for a custom view), we have to do it here. This controllers the shortcut value to the selected item.
     [self.textBarItemShortcutView bind:@"shortcutValue" toObject:self.textBarItemsController withKeyPath:@"selection.shortcut" options:nil];
-    
+
     [self.textBarPreferencesItemHiddenImage addObserver:self forKeyPath:@"image" options:NSKeyValueObservingOptionNew context:nil];
     [self.textBarPreferencesItemImage addObserver:self forKeyPath:@"image" options:NSKeyValueObservingOptionNew context:nil];
     [self.textBarPreferencesItemImage registerForDraggedTypes:[NSImage imageTypes]];
-    
+
     [self initialiseCachedImages];
-    
+
     /* RichS: Changed to look more like a button, so, removing this hack...
      // Set up the linked text to look like a HTML hyperlink
      NSColor *color = [NSColor blueColor];
@@ -237,7 +237,7 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
 -(void)initialiseTransformers {
     RSNamedImageTransformer *namedImageTransformer = [[RSNamedImageTransformer alloc] init];
     [NSValueTransformer setValueTransformer:namedImageTransformer forName:@"RSNamedImageTransformer"];
-    
+
     RSNumberTransformer *numberTransformer = [[RSNumberTransformer alloc] init];
     [NSValueTransformer setValueTransformer:numberTransformer forName:@"RSNumberTransformer"];
 }
@@ -252,21 +252,21 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     if ( ![NSThread isMainThread] ) {
         NSLog(@"Not on MainThead: %s", __FUNCTION__);
     }
-    
+
     if ( nil == _statusItem ) {
         NSStatusBar *statusBar = [NSStatusBar systemStatusBar];
         _statusItem = [statusBar statusItemWithLength:NSSquareStatusItemLength];
-        
+
         [_statusItem setMenu:_statusMenu];
         [_statusMenu setDelegate:self];
-        
+
         //CGFloat menuSize = [[NSStatusBar systemStatusBar] thickness] * 0.7;
         NSImage *menuImage = [NSImage imageNamed:@"TextBar32"];
-        
+
         if ( self.options.darkMode ) {
             //menuImage.template = YES;
         }
-        
+
         _statusItem.image = menuImage;
         _statusItem.highlightMode = YES;
     }
@@ -277,7 +277,7 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     if ( ![NSThread isMainThread] ) {
         NSLog(@"Not on MainThead: %s", __FUNCTION__);
     }
-    
+
     if ( _statusItem ) {
         NSStatusBar *statusBar = [NSStatusBar systemStatusBar];
         [statusBar removeStatusItem:_statusItem];
@@ -298,7 +298,7 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     @synchronized(_imageCache) {
         image = [_imageCache objectForKey:imageName];
     }
-    
+
     return image;
 }
 
@@ -307,7 +307,7 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     if ( ![NSThread isMainThread] ) {
         NSLog(@"Not on MainThead: %s", __FUNCTION__);
     }
-    
+
     // Subscribe for DarkMode notifications
     if ([Helpers supportsDarkMode] ) {
         [[NSDistributedNotificationCenter defaultCenter] addObserver:self
@@ -315,7 +315,7 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
                                                                 name:@"AppleInterfaceThemeChangedNotification"
                                                               object:nil];
     }
-    
+
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(imageDropped:)
                                                  name:@"RSImageDroppedNotification"
@@ -327,17 +327,17 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     if ( ![NSThread isMainThread] ) {
         NSLog(@"Not on MainThead: %s", __FUNCTION__);
     }
-    
+
     // Set up watchers for Preferences (so we can update the menubar items)
     NSKeyValueObservingOptions options = NSKeyValueObservingOptionPrior|NSKeyValueObservingOptionNew|NSKeyValueObservingOptionOld;
-    
+
     [self.textBarItemsController addObserver:self forKeyPath:@"arrangedObjects" options:options context:nil];
     [self.textBarItemsController addObserver:self forKeyPath:@"arrangedObjects.name" options:options context:nil];
     [self.textBarItemsController addObserver:self forKeyPath:@"arrangedObjects.isEnabled" options:options context:nil];
     [self.textBarItemsController addObserver:self forKeyPath:@"arrangedObjects.isNotify" options:options context:nil];
     [self.textBarItemsController addObserver:self forKeyPath:@"arrangedObjects.imageNamed" options:options context:nil];
     [self.textBarItemsController addObserver:self forKeyPath:@"arrangedObjects.script" options:options context:nil];
-    [self.textBarItemsController addObserver:self forKeyPath:@"arrangedObjects.refreshSeconds" options:options context:nil];
+    [self.textBarItemsController addObserver:self forKeyPath:@"arrangedObjects.refreshMs" options:options context:nil];
     [self.textBarItemsController addObserver:self forKeyPath:@"arrangedObjects.actionType" options:options context:nil];
     [self.textBarItemsController addObserver:self forKeyPath:@"arrangedObjects.actionScript" options:options context:nil];
     [self.textBarItemsController addObserver:self forKeyPath:@"arrangedObjects.isCloudEnabled" options:options context:nil];
@@ -349,7 +349,7 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     if ( ![NSThread isMainThread] ) {
         NSLog(@"Not on MainThead: %s", __FUNCTION__);
     }
-    
+
     //@try{
     [self.textBarItemsController removeObserver:self forKeyPath:@"arrangedObjects"];
     [self.textBarItemsController removeObserver:self forKeyPath:@"arrangedObjects.name"];
@@ -357,21 +357,21 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     [self.textBarItemsController removeObserver:self forKeyPath:@"arrangedObjects.isNotify"];
     [self.textBarItemsController removeObserver:self forKeyPath:@"arrangedObjects.imageNamed"];
     [self.textBarItemsController removeObserver:self forKeyPath:@"arrangedObjects.script"];
-    [self.textBarItemsController removeObserver:self forKeyPath:@"arrangedObjects.refreshSeconds"];
+    [self.textBarItemsController removeObserver:self forKeyPath:@"arrangedObjects.refreshMs"];
     [self.textBarItemsController removeObserver:self forKeyPath:@"arrangedObjects.actionType"];
     [self.textBarItemsController removeObserver:self forKeyPath:@"arrangedObjects.actionScript"];
     [self.textBarItemsController removeObserver:self forKeyPath:@"arrangedObjects.isCloudEnabled"];
     [self.textBarItemsController removeObserver:self forKeyPath:@"arrangedObjects.shortcut"];
     //}
     //@catch (NSException * __unused exception) {}
-    
+
     // RichS: Theoretically this should be better, but, if you quickly add/remove TextBar items in Preferences UI, the menubar goes nuts and adds loads of entry.
     //    [Helpers removeObserver:self fromObject:self.textBarItemsController forKeyPath:@"arrangedObjects"];
     //    [Helpers removeObserver:self fromObject:self.textBarItemsController forKeyPath:@"arrangedObjects.isEnabled"];
     //    [Helpers removeObserver:self fromObject:self.textBarItemsController forKeyPath:@"arrangedObjects.isNotify"];
     //    [Helpers removeObserver:self fromObject:self.textBarItemsController forKeyPath:@"arrangedObjects.imageNamed"];
     //    [Helpers removeObserver:self fromObject:self.textBarItemsController forKeyPath:@"arrangedObjects.script"];
-    //    [Helpers removeObserver:self fromObject:self.textBarItemsController forKeyPath:@"arrangedObjects.refreshSeconds"];
+    //    [Helpers removeObserver:self fromObject:self.textBarItemsController forKeyPath:@"arrangedObjects.refreshMs"];
     //    [Helpers removeObserver:self fromObject:self.textBarItemsController forKeyPath:@"arrangedObjects.actionType"];
     //    [Helpers removeObserver:self fromObject:self.textBarItemsController forKeyPath:@"arrangedObjects.actionScript"];
 }
@@ -381,10 +381,10 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     if ( ![NSThread isMainThread] ) {
         NSLog(@"Not on MainThead: %s", __FUNCTION__);
     }
-    
+
     if ( 0 == [self.textBarItems count]) {
         RSTextBarItem* item;// = [RSTextBarItem instance];
-        
+
         /* Debugging
          for( int i = 0; i < 4; ++i ) {
          item = [RSTextBarItem instance];
@@ -392,11 +392,11 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
          item.isNotify = YES;
          item.imageNamed = @"computer-32";
          item.script = [NSString stringWithFormat:@"echo \"%dHello%d\"", i, i];
-         item.refreshSeconds = [NSNumber numberWithUnsignedInt:10];
+         item.refreshMs = [NSNumber numberWithUnsignedInt:10];
          [self addTextBarItemInternal:item];
          }
          */
-        
+
         ///*
         // Own IP Address
         item = [RSTextBarItem instance];
@@ -405,35 +405,35 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
         item.isNotify = YES;
         item.imageNamed = @"computer-32";
         item.script = @"ipconfig getifaddr en0";
-        item.refreshSeconds = [NSNumber numberWithUnsignedInt:60];
+        item.refreshMs = [NSNumber numberWithUnsignedInt:60];
         [self addTextBarItemInternal:item];
-        
+
         // External IP Address
         item = [RSTextBarItem instance];
         item.name = @"External IP Address";
         item.isEnabled = YES;
         item.imageNamed = @"globe-32";
         item.script = @"curl -s http://ipinfo.io/ip";
-        item.refreshSeconds = [NSNumber numberWithUnsignedInt:60];
+        item.refreshMs = [NSNumber numberWithUnsignedInt:60];
         [self addTextBarItemInternal:item];
-        
+
         // Username
         item = [RSTextBarItem instance];
         item.name = @"Who Am I";
         item.isEnabled = YES;
         item.imageNamed = @"user_male3-32";
         item.script = @"whoami";
-        item.refreshSeconds = [NSNumber numberWithUnsignedInt:360];
+        item.refreshMs = [NSNumber numberWithUnsignedInt:360];
         [self addTextBarItemInternal:item];
-        
+
         //        // Time in UK timezone
         //        item = [RSTextBarItem instance];
         //        item.isEnabled = YES;
         //        item.imageNamed = @"clock-32";
         //        item.script = @"UKDATE=`TZ=UK/Manchester date +\"%H:%M %p\"` ; echo \"UK: $UKDATE\"";
-        //        item.refreshSeconds = [NSNumber numberWithUnsignedInt:60];
+        //        item.refreshMs = [NSNumber numberWithUnsignedInt:60];
         //        [self addTextBarItemInternal:item];
-        
+
         // SSID
         item = [RSTextBarItem instance];
         item.name = @"WiFi SSID";
@@ -441,9 +441,9 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
         item.isNotify = YES;
         item.imageNamed = @"rfid_signal-32";
         item.script = @"networksetup -getairportnetwork en0 | sed 's/.*[:] //'";
-        item.refreshSeconds = [NSNumber numberWithUnsignedInt:60];
+        item.refreshMs = [NSNumber numberWithUnsignedInt:60];
         [self addTextBarItemInternal:item];
-        
+
         // DF
         item = [RSTextBarItem instance];
         item.name = @"Free Disk Space";
@@ -451,23 +451,23 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
         item.isNotify = YES;
         item.imageNamed = @"database-32";
         item.script = @"df -H / | egrep '/$' | awk '{print $4}'";
-        item.refreshSeconds = [NSNumber numberWithUnsignedInt:60];
+        item.refreshMs = [NSNumber numberWithUnsignedInt:60];
         [self addTextBarItemInternal:item];
         //*/
-        
+
         // RelayFM - Next Show
         //        item = [RSTextBarItem instance];
         //        item.isEnabled = YES;
         //        item.imageNamed = @"relayfm-32";
         //        item.script = @"Relay FM";
-        //        item.refreshSeconds = [NSNumber numberWithUnsignedInt:360];
+        //        item.refreshMs = [NSNumber numberWithUnsignedInt:360];
         //        item.isNotify = YES;
         //        item.actionType = @"Script";
         //        item.actionScript = @"Relay FM";
         //        [self addTextBarItemInternal:item];
-        
+
         [self writePreferences];
-        
+
         [self updateTextBarItemController];
         [self addBarItems];
     }
@@ -476,7 +476,7 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
 //-------------------------------------------------------------------------//
 -(void)additionalImages:(NSString*)imagesFolder {
     NSMutableArray* textBarImages = [_textBarImages mutableCopy];
-    
+
     NSString *filename;
     NSDirectoryEnumerator *enumerator = [[NSFileManager defaultManager] enumeratorAtPath:imagesFolder];
     while (filename = [enumerator nextObject]) {
@@ -485,14 +485,14 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
             [textBarImages addObject:[NSString stringWithFormat:@":%@", [imagesFolder stringByAppendingPathComponent:filename]]];
         }
     }
-    
+
     _textBarImages = textBarImages;
 }
 
 //-------------------------------------------------------------------------//
 +(NSFont*)fontWithName:(NSString*)name size:(NSUInteger)size {
     NSFont* font;
-    
+
     if (name && 0 < [name length]) {
         if (NSOrderedSame == [@"System" compare:name]) {
             font = [NSFont systemFontOfSize:size];
@@ -510,7 +510,7 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
             font = [NSFont fontWithName:name size:size];
         }
     }
-    
+
     return font;
 }
 
@@ -519,10 +519,10 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     if ( ![NSThread isMainThread] ) {
         NSLog(@"Not on MainThead: %s", __FUNCTION__);
     }
-    
+
     BOOL originalDarkMode = self.options.darkMode;
     self.options.darkMode = [Helpers isDarkMode];
-    
+
     if ( originalDarkMode != self.options.darkMode ) {
         [self updateANSIEscaper];
         [self refreshTextBarItems];
@@ -550,13 +550,13 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     if (self.options.scriptLogging) {
         NSLog(@"receiveWakeNote: %@", [notif name]);
     }
-    
+
     if (self.options.refreshOnWake) {
-        
+
         // Delay execution for a few seconds - to try to let wifi re-connect.
         double delayTime = 6.0; // Seconds
         NSLog(@"TextBar: Refresh on wake detected");
-        
+
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, delayTime * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
             NSLog(@"TextBar: Refresh on wake actioned");
             [self refreshTextBarItems];
@@ -572,7 +572,7 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     [[[NSWorkspace sharedWorkspace] notificationCenter] addObserver:self
                                                            selector:@selector(receiveSleepNote:)
                                                                name:NSWorkspaceWillSleepNotification object:NULL];
-    
+
     [[[NSWorkspace sharedWorkspace] notificationCenter] addObserver:self
                                                            selector:@selector(receiveWakeNote:)
                                                                name:NSWorkspaceDidWakeNotification object:NULL];
@@ -598,7 +598,7 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
 
 //-------------------------------------------------------------------------//
 -(void)webView:(WebView *)webView decidePolicyForNewWindowAction:(NSDictionary *)actionInformation request:(NSURLRequest *)request newFrameName:(NSString *)frameName decisionListener:(id<WebPolicyDecisionListener>)listener {
-    
+
     if ([actionInformation objectForKey:WebActionElementKey]) {
         [[NSWorkspace sharedWorkspace] openURL:[request URL]];
     }
@@ -618,15 +618,15 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
 
 //-------------------------------------------------------------------------//
 -(void)changeDefaultFont:(id)sender {
-    
+
     NSLog(@"Changed Font");
-    
+
     NSFont *oldFont = [RSAppDelegate fontWithName:self.options.defaultFontName size:self.options.defaultFontSize];
     NSFont *newFont = [sender convertFont:oldFont];
-    
+
     self.options.defaultFontName = newFont.fontName;
     self.options.defaultFontSize = newFont.pointSize;
-    
+
     return;
 }
 
@@ -647,7 +647,7 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     if ( ![NSThread isMainThread] ) {
         NSLog(@"Not on MainThead: %s", __FUNCTION__);
     }
-    
+
     for( RSTextBarItem* item in self.textBarItems ) {
         [item enable];
     }
@@ -658,11 +658,11 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     if ( ![NSThread isMainThread] ) {
         NSLog(@"Not on MainThead: %s", __FUNCTION__);
     }
-    
+
     [self removeBarItems];
     [self.textBarItems removeAllObjects];
     [self.textBarItemsAlt removeAllObjects];
-    
+
     // Can cause issues as it is handled in separate events (via dispatch)
     if (controllerRefresh) {
         [self.textBarItemsController rearrangeObjects];
@@ -679,10 +679,10 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     if ( ![NSThread isMainThread] ) {
         NSLog(@"Not on MainThead: %s", __FUNCTION__);
     }
-    
+
     for( RSTextBarItem* item in self.textBarItems ) {
         // Only refresh items if positive refresh time, not already refreshed, or, all if requested.
-        if (item.isEnabled && (refreshAll || 0 < [item.refreshSeconds integerValue] || 0 == item.refreshDate.length)) {
+        if (item.isEnabled && (refreshAll || 0 < [item.refreshMs integerValue] || 0 == item.refreshDate.length)) {
             [item refresh];
         }
     }
@@ -707,11 +707,11 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     if ( ![NSThread isMainThread] ) {
         NSLog(@"Not on MainThead: %s", __FUNCTION__);
     }
-    
+
     // This works around the limitations of KVO not telling us which item has been removed
     NSSet *statusBarItems = [NSSet setWithArray:self.textBarItems];
     NSMutableSet *statusBarItemsAlt = [NSMutableSet setWithArray:self.textBarItemsAlt];
-    
+
     [statusBarItemsAlt unionSet:statusBarItems];
     for( RSTextBarItem* item in statusBarItemsAlt ) {
         [item removeStatusBar];
@@ -734,17 +734,17 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     if ( ![NSThread isMainThread] ) {
         NSLog(@"Not on MainThead: %s", __FUNCTION__);
     }
-    
+
     BOOL requireMainMenuBar = YES;
-    
+
     for( RSTextBarItem* item in [self.textBarItems reverseObjectEnumerator] ) {
         [item enable];
-        
+
         if ( item.isEnabled ) {
             requireMainMenuBar = NO;
         }
     }
-    
+
     if ( requireMainMenuBar ) {
         [self addMainMenuBar];
     } else {
@@ -758,14 +758,14 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
         if ( ![NSThread isMainThread] ) {
             NSLog(@"Not on MainThead: %s", __FUNCTION__);
         }
-        
+
         NSMutableArray* touchBarIdentifiers = [NSMutableArray array];
         for( RSTextBarItem* item in self.textBarItems ) {
             if ( item.isEnabled ) {
                 [touchBarIdentifiers addObject:item.itemGuid];
             }
         }
-        
+
         [_touchBar setDefaultItemIdentifiers:touchBarIdentifiers];
         [_touchBar setCustomizationAllowedItemIdentifiers:touchBarIdentifiers];
     }
@@ -778,7 +778,7 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
             return item;
         }
     }
-    
+
     return nil;
 }
 
@@ -787,15 +787,15 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     if ( ![NSThread isMainThread] ) {
         NSLog(@"Not on MainThead: %s", __FUNCTION__);
     }
-    
+
     BOOL requireMainMenuBar = YES;
-    
+
     for( RSTextBarItem* item in self.textBarItems ) {
         if ( item.isEnabled ) {
             requireMainMenuBar = NO;
         }
     }
-    
+
     if ( requireMainMenuBar ) {
         [self addMainMenuBar];
     } else {
@@ -816,19 +816,19 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
 //-------------------------------------------------------------------------//
 -(NSImage*)imageForName:(NSString*)imageName withSize:(long)size {
     NSImage* image;
-    
+
     //NSLog(@"ImageForName: %@ withSize: %ld", imageName, size);
-    
+
     NSString* imageCacheName = [NSString stringWithFormat:@"%ld:%@", (long)size, imageName];
     image = [self cachedImageForName:imageCacheName];
     if ( nil == image ) {
         if ( [imageName hasPrefix:@":"] ) {
             // Avoid caching user provided files
             //imageCacheName = @"";
-            
+
             NSString* imageFileName = [imageName substringFromIndex:1];
             image = [[[NSImage alloc] initWithContentsOfFile:imageFileName] copy];
-            
+
             if ( 0 < size ) {
                 image = [self resizeImageAspectRatio:image withSize:size];
             }
@@ -838,26 +838,26 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
                 image = [self resizeImageAspectRatio:image withSize:size];
             }
         }
-        
+
         if ( nil != image && 0 < [imageCacheName length] ) {
             [self cacheImage:image forName:imageCacheName];
         }
     }
-    
+
     return image;
 }
 
 //-------------------------------------------------------------------------//
 -(NSSize)aspectRatioForSize:(NSSize)size withMax:(long)maxSize {
     double ratio = fmin(maxSize / size.width, maxSize / size.height);
-    
+
     return CGSizeMake(size.width * ratio, size.height * ratio);
 }
 
 //-------------------------------------------------------------------------//
 -(NSImage*)resizeImageAspectRatio:(NSImage*)image withSize:(long)size {
     NSSize imageSize = [image size];
-    
+
     return [image resizeTo:[self aspectRatioForSize:imageSize withMax:size]];
 }
 
@@ -871,10 +871,10 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     if ( ![NSThread isMainThread] ) {
         NSLog(@"Not on MainThead: %s", __FUNCTION__);
     }
-    
+
     NSMenuItem* menuItem = (NSMenuItem*)sender;
     RSTextBarItem* item = (RSTextBarItem*)menuItem.representedObject;
-    
+
     NSAttributedString* attributedString = [item getAttributedTextForText:[item.textBarScript resultStringToFirstItem:item.scriptResult]];
     [self setPasteboardAttributedString:attributedString];
 }
@@ -889,10 +889,10 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     if ( ![NSThread isMainThread] ) {
         NSLog(@"Not on MainThead: %s", __FUNCTION__);
     }
-    
+
     NSMenuItem* menuItem = (NSMenuItem*)sender;
     NSAttributedString* attributedString = (NSAttributedString*)menuItem.representedObject;
-    
+
     [self setPasteboardAttributedString:attributedString];
 }
 
@@ -906,33 +906,33 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     if ( ![NSThread isMainThread] ) {
         NSLog(@"Not on MainThead: %s", __FUNCTION__);
     }
-    
+
     NSMenuItem* menuItem = (NSMenuItem*)sender;
     RSTextBarItem* item = (RSTextBarItem*)menuItem.representedObject;
     NSAttributedString* attributedString = (NSAttributedString*)menuItem.attributedTitle;
-    
+
     [self executeItemAction:item withText:attributedString andIndex:menuItem.tag];
 }
 
 //-------------------------------------------------------------------------//
 -(void)executeItemAction:(RSTextBarItem*)item withText:(NSAttributedString*)attributedString andIndex:(NSInteger)index {
-    
+
     NSString* actionScript = item.actionScript;
     if (nil != item.actionScriptOverride) {
         actionScript = item.actionScriptOverride;
     }
-    
+
     if ( 0 < [item.actionScriptOverride length] || (item.isActionScript && 0 < [item.actionScript length]) ) {
         if (NSOrderedSame == [actionScript compare:@"Relay FM"] || NSOrderedSame == [actionScript compare:@"Relay.FM"]) {
             NSBundle *myBundle = [NSBundle mainBundle];
             NSString *scriptPath= [myBundle pathForResource:@"textbar-relayfm-action" ofType:@"sh"];
             actionScript = [NSString stringWithFormat:@"cd '%@' && './%@'", [scriptPath stringByDeletingLastPathComponent], [scriptPath lastPathComponent]];
         }
-        
+
         NSMutableDictionary* environment = [NSMutableDictionary dictionary];
         [environment setObject:[NSString stringWithFormat:@"%lu", index] forKey:@"TEXTBAR_INDEX"];
         [environment setObject:[attributedString string] forKey:@"TEXTBAR_TEXT"];
-        
+
         [self.textBarScriptQueue addOperationWithBlock:^{
             RSTextBarScript* textBarScript = [RSTextBarScript instanceWithScript:actionScript andOptions:self.options];
             item.textBarScript = textBarScript;
@@ -957,10 +957,10 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     if ( ![NSThread isMainThread] ) {
         NSLog(@"Not on MainThead: %s", __FUNCTION__);
     }
-    
+
     NSMenuItem* menuItem = (NSMenuItem*)sender;
     RSTextBarItem* item = (RSTextBarItem*)menuItem.representedObject;
-    
+
     [item refresh];
 }
 
@@ -974,7 +974,7 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     if ( ![NSThread isMainThread] ) {
         NSLog(@"Not on MainThead: %s", __FUNCTION__);
     }
-    
+
     [self refreshTextBarItems];
 }
 
@@ -1023,16 +1023,16 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     if ( ![NSThread isMainThread] ) {
         NSLog(@"Not on MainThead: %s", __FUNCTION__);
     }
-    
+
     [self.options readPreferences:[[NSUserDefaults standardUserDefaults] dictionaryRepresentation]];
     [self updateANSIEscaper];
-    
+
     // Feature requested by customer.
     if(self.options.hideTextBarMenuIcon) {
         NSMenuItem* item = [_statusMenu itemAtIndex:0];
         item.image = nil;
     }
-    
+
     NSDictionary* textBarPreferences = [NSKeyedUnarchiver unarchiveObjectWithData:[[NSUserDefaults standardUserDefaults] objectForKey:@"textBarPreferences"]];
     [self loadTextBarItems:textBarPreferences];
 }
@@ -1042,16 +1042,16 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     if ( ![NSThread isMainThread] ) {
         NSLog(@"Not on MainThead: %s", __FUNCTION__);
     }
-    
+
     [self removeTextBarItems:NO];
-    
+
     if ( 2 == [[textBarPreferences objectForKey:@"Version"] unsignedIntegerValue] ) {
         NSArray* items = [textBarPreferences objectForKey:@"Items"];
-        
+
         for( RSTextBarItem* item in items ) {
             [self addTextBarItemInternal:item];
         }
-        
+
         [self updateTextBarItemController];
         [self addBarItems];
     }
@@ -1061,7 +1061,7 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
 - (NSDictionary*)preferencesAsDict {
     NSDictionary* textBarPreferences = @{@"Version" : [NSNumber numberWithUnsignedInt:2],
                                          @"Items" : self.textBarItems};
-    
+
     return textBarPreferences;
 }
 
@@ -1070,9 +1070,9 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     if ( ![NSThread isMainThread] ) {
         NSLog(@"Not on MainThead: %s", __FUNCTION__);
     }
-    
+
     [[NSUserDefaults standardUserDefaults] setObject:[NSKeyedArchiver archivedDataWithRootObject:[self preferencesAsDict]] forKey:@"textBarPreferences"];
-    
+
     // Flush to disk - to try to avoid any corruption (if app crashes).
     [[NSUserDefaults standardUserDefaults] synchronize];
 }
@@ -1085,10 +1085,10 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
 //-------------------------------------------------------------------------//
 -(void)updateANSIEscaper {
     _defaultANSIEscaper.defaultStringColor = [NSColor labelColor];
-    
+
     _itemANSIEscaper.defaultStringColor = [NSColor labelColor];
     _itemANSIEscaper.font = [RSAppDelegate fontWithName:self.options.defaultFontName size:self.options.defaultFontSize];
-    
+
     // Highlighted color is always light - which, confusingly, is handled by macOS so we have to swap the colors :-/.
     _highlightedItemANSIEscaper.defaultStringColor = self.options.darkMode ? [NSColor labelColor] : [NSColor textBackgroundColor];
     _highlightedItemANSIEscaper.font = [RSAppDelegate fontWithName:self.options.defaultFontName size:self.options.defaultFontSize];
@@ -1099,15 +1099,15 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     if ( ![NSThread isMainThread] ) {
         NSLog(@"Not on MainThead: %s", __FUNCTION__);
     }
-    
+
     //    NSLog(@"ArrangedObjects keyPath: %@, change: %@, object: %@", keyPath, change, object);
-    
+
     if(object == self.textBarPreferencesItemHiddenImage && [keyPath isEqualToString:@"image"])
     {
         NSLog(@"Image Name: %@", keyPath);
     } else {
         [self removeObservers];
-        
+
         if ([object isKindOfClass:[NSArrayController class]]) {
             NSArrayController* controller = object;
             if (1 == controller.selectedObjects.count) {
@@ -1118,7 +1118,7 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
                         if (NSOrderedSame == [textBarItem.script compare:@"Relay FM"] || NSOrderedSame == [textBarItem.script compare:@"Relay.FM"]) {
                             if (0 == textBarItem.actionScript.length) {
                                 textBarItem.imageNamed = @"relayfm-32";
-                                textBarItem.refreshSeconds = [NSNumber numberWithUnsignedInt:360];
+                                textBarItem.refreshMs = [NSNumber numberWithUnsignedInt:360];
                                 textBarItem.isNotify = YES;
                                 textBarItem.actionType = @"Script";
                                 textBarItem.actionScript = @"Relay FM";
@@ -1126,18 +1126,18 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
                         } else if (NSOrderedSame == [textBarItem.script compare:@"Pictures"]) {
                             if (0 == textBarItem.actionScript.length) {
                                 textBarItem.imageNamed = @"picture-32";
-                                textBarItem.refreshSeconds = [NSNumber numberWithUnsignedInt:360];
+                                textBarItem.refreshMs = [NSNumber numberWithUnsignedInt:360];
                             }
                         }
                     }
                 }
             }
         }
-        
+
         __weak RSAppDelegate* weakSelf = self;
         [[NSOperationQueue mainQueue] addOperationWithBlock: ^{
             BOOL fullRefresh = NO;
-            
+
             [weakSelf writePreferences];
             if ( [weakSelf.textBarItems count] != [weakSelf.textBarItemsAlt count ]) {
                 fullRefresh = YES;
@@ -1150,13 +1150,13 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
             } else if([keyPath hasPrefix:@"arrangedObjects"]) {
                 fullRefresh = YES;
             }
-            
+
             if ( fullRefresh ) {
                 [weakSelf removeBarItems];
                 [weakSelf addBarItems];
                 [weakSelf textBarItemsAltCopy];
             }
-            
+
             [weakSelf addObservers];
         }];
     }
@@ -1167,7 +1167,7 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     if ( ![NSThread isMainThread] ) {
         NSLog(@"Not on MainThead: %s", __FUNCTION__);
     }
-    
+
     [self.textBarItemsAlt removeAllObjects];
     for( RSTextBarItem* item in self.textBarItems ) {
         [self.textBarItemsAlt addObject:item];
@@ -1179,7 +1179,7 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     if ( ![NSThread isMainThread] ) {
         NSLog(@"Not on MainThead: %s", __FUNCTION__);
     }
-    
+
     [self.textBarItemsController rearrangeObjects];
 }
 
@@ -1203,13 +1203,13 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     [[NSFontPanel sharedFontPanel] makeKeyAndOrderFront:self];
     NSFont *theFont = [NSFont fontWithName:self.options.defaultFontName size:self.options.defaultFontSize];
     [[NSFontPanel sharedFontPanel] setPanelFont:theFont isMultiple:NO];
-    
+
     [[NSFontManager sharedFontManager] setDelegate:self];
 }
 
 //-------------------------------------------------------------------------//
 - (IBAction)actionResetFont:(id)sender {
-    
+
     [self.options resetDefaultFont];
 }
 
@@ -1249,7 +1249,7 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     self.progressSheetText.stringValue = @"Please wait... Enabling";
     self.progressSheetButton.enabled = NO;
     self.progressSheetButton.stringValue = @"...";
-    
+
     [NSApp beginSheet:self.progressSheet
        modalForWindow:self.window
         modalDelegate:self
@@ -1271,7 +1271,7 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     } else {
         // ...
     }
-    
+
     [sheet close];
 }
 
@@ -1331,7 +1331,7 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
         NSMenuItem* menuItem = [menu itemAtIndex:menu.itemArray.count-1];
         if ( nil != menuItem ) {
             RSTextBarItem* item = (RSTextBarItem*)menuItem.representedObject;
-            
+
             // Try to scroll to this item in the table.
             if (nil != item) {
                 [self.textBarItemsController setSelectedObjects:@[item]];
@@ -1339,9 +1339,9 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
             }
         }
     }
-    
+
     [self.textBarPreferences makeKeyAndOrderFront:self];
-    
+
     // Force the Window to the front.
     [NSApp activateIgnoringOtherApps:YES];
 }
@@ -1359,7 +1359,7 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
 //-------------------------------------------------------------------------//
 - (IBAction)actionAbout:(id)sender {
     [NSApp orderFrontStandardAboutPanel:self];
-    
+
     // Force the Window to the front.
     [NSApp activateIgnoringOtherApps:YES];
 }
@@ -1387,12 +1387,12 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
 - (IBAction)actionResetPreferences:(id)sender {
     [self showConfirmationSheetWithTitle:@"Are you sure?" andMessage:@"Resetting to defaults will remove all of your TextBar scripts." completionHandler:^(NSModalResponse returnCode) {
         if (NSModalResponseOK == returnCode) {
-            
+
             // RichS: No idea why we have to use a performSelector, but if we don't the we either get:
             // * If we don't dispatch an operation to the main queue we don't get a dismissal of the sheet
             // * If we do dispatch an operaiton to the main queue we get a crash
             [self performSelector:@selector(resetToDefaults) withObject:nil afterDelay:0.5];
-            
+
             //            __weak RSAppDelegate* weakSelf = self;
             //            [[NSOperationQueue mainQueue] addOperationWithBlock: ^{
             //                [weakSelf removeTextBarItems:NO];
@@ -1432,7 +1432,7 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
 - (IBAction)actionShowWebMenu:(id)sender {
     NSRect frame = [(NSButton *)sender frame];
     NSPoint menuOrigin = [[(NSButton *)sender superview] convertPoint:NSMakePoint(frame.origin.x, frame.origin.y+frame.size.height+40) toView:[(NSButton *)sender superview]];
-    
+
     NSEvent *event =  [NSEvent mouseEventWithType:NSLeftMouseDown
                                          location:menuOrigin
                                     modifierFlags:NSLeftMouseDownMask // 0x100
@@ -1442,7 +1442,7 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
                                       eventNumber:0
                                        clickCount:1
                                          pressure:1];
-    
+
     [NSMenu popUpContextMenu:self.statusMenu withEvent:event forView:[(NSButton *)sender superview]];
 }
 
@@ -1471,17 +1471,17 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     if ( ![NSThread isMainThread] ) {
         NSLog(@"Not on MainThead: %s", __FUNCTION__);
     }
-    
+
     // TableDragDrop: This is the code that handles drag-n-drop ordering - table currently doesn't need to accept drops from outside!
     NSPasteboard* pboard = [info draggingPasteboard];
     NSData* rowData = [pboard dataForType:MyPrivateTableViewDataType];
-    
+
     NSIndexSet* rowIndexes = [NSKeyedUnarchiver unarchiveObjectWithData:rowData];
     NSUInteger from = [rowIndexes firstIndex];
-    
+
     NSMutableDictionary *traveller = [[self.textBarItemsController arrangedObjects] objectAtIndex:from];
     NSUInteger length = [[self.textBarItemsController arrangedObjects] count];
-    
+
     // Ensure the item has moved
     if ( from != to && from != ( to - 1 ) ) {
         [self removeObservers];
@@ -1499,27 +1499,27 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
         }
         [self textBarItemsAltCopy];
         [self addObservers];
-        
+
         [self writePreferences];
-        
+
         // Re-loads the status bar items (in the new order!)
         [self removeBarItems];
         [self addBarItems];
     }
-    
+
     return YES;
 }
 
 //-------------------------------------------------------------------------//
 -(IBAction)actionImportTextBarItems:(id)sender {
     NSOpenPanel* panel = [NSOpenPanel openPanel];
-    
+
     // This method displays the panel and returns immediately. The completion handler is called when the user selects an
     // item or cancels the panel.
     [panel beginWithCompletionHandler:^(NSInteger result){
         if (result == NSFileHandlingPanelOKButton) {
             NSURL* filePath = [[panel URLs] objectAtIndex:0];
-            
+
             NSDictionary* textBarPreferences = [NSKeyedUnarchiver unarchiveObjectWithFile:[filePath path]];
             if (textBarPreferences) {
                 [self loadTextBarItems:textBarPreferences];
@@ -1536,7 +1536,7 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
     [panel beginWithCompletionHandler:^(NSInteger result){
         if (result == NSFileHandlingPanelOKButton) {
             NSURL* filePath = [panel URL];
-            
+
             // Write the contents in the new format.
             BOOL success = [NSKeyedArchiver archiveRootObject:[self preferencesAsDict] toFile:[filePath path]];
             NSLog(@"Exported: %@", success ? @"Yes" : @"No");
@@ -1547,19 +1547,19 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
 //-------------------------------------------------------------------------//
 - (IBAction)actionExportTextBarItem:(id)sender {
     RSTextBarItem* item = [self.textBarItemsController.selectedObjects firstObject];
-    
+
     if (nil != item) {
         RSTextBarItem* exportItem = [item clone];
         [exportItem prepareForExport];
-        
+
         // Try to make file exports explainable by changing the field name.
         self.textBarItemExport.scriptLabel.stringValue = exportItem.isFileScript ? @"Script File:" : @"Script:";
         self.textBarItemExport.actionScriptLabel.stringValue = exportItem.isFileActionScript ? @"Action File:" : @"Action Script:";
-        
+
         // Hide the action script if they are empty or a clipboard action.
         //self.textBarItemExport.actionScriptLabel.enabled = !([NSString isEmpty:exportItem.actionScript] || exportItem.actionType == kActionClipboard);
         self.textBarItemExport.actionScriptField.editable = !([NSString isEmpty:exportItem.actionScript] || exportItem.actionType == kActionClipboard);
-        
+
         // Set the date in the fields
         self.textBarItemExport.imageView.image = [self imageForName:exportItem.imageNamed withSize:52];
         self.textBarItemExport.nameField.stringValue = exportItem.name;
@@ -1569,7 +1569,7 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
         } else {
             self.textBarItemExport.actionScriptField.stringValue = @"";
         }
-        
+
         NSMutableString* message = [[NSMutableString alloc] init];
         if (exportItem.isFileScript) {
             [message appendString:@"Script was detected as a file - automatically exporting file contents.\n"];
@@ -1582,7 +1582,7 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
             [message appendString:@"If the action script uses any dependent files they are not exported.\n"];
         }
         self.textBarItemExport.messageLabel.stringValue = 0 < message.length ? message : @"";
-        
+
         [self.window beginSheet:self.textBarItemExport  completionHandler:^(NSModalResponse returnCode) {
             if (NSModalResponseOK == returnCode) {
                 // Set the default name for the file and show the panel.
@@ -1604,10 +1604,10 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
 -(void)showMessageSheetWithTitle:(NSString*)title andMessage:(NSString*)message {
     self.textBarMessage.titleTextField.stringValue = title;
     self.textBarMessage.messageTextField.stringValue = message;
-    
+
     // Force show the Preferences UI - so we can anchor to it.
     [self actionPreferences:nil];
-    
+
     [self.window beginSheet:self.textBarMessage  completionHandler:^(NSModalResponse returnCode) {
         if (NSModalResponseOK == returnCode) {
         }
@@ -1618,10 +1618,10 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
 -(void)showConfirmationSheetWithTitle:(NSString*)title andMessage:(NSString*)message completionHandler:(void (^)(NSModalResponse returnCode))completionHandler {
     self.textBarConfirmation.titleTextField.stringValue = title;
     self.textBarConfirmation.messageTextField.stringValue = message;
-    
+
     // Force show the Preferences UI - so we can anchor to it.
     [self actionPreferences:nil];
-    
+
     [self.window beginSheet:self.textBarConfirmation completionHandler:^(NSModalResponse returnCode) {
         completionHandler(returnCode);
     }];
@@ -1630,16 +1630,16 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
 //-------------------------------------------------------------------------//
 - (IBAction)actionSelectScriptFile:(id)sender {
     RSTextBarItem* item = [self.textBarItemsController.selectedObjects firstObject];
-    
+
     if (nil != item) {
         NSOpenPanel* panel = [NSOpenPanel openPanel];
-        
+
         // This method displays the panel and returns immediately. The completion handler is called when the user selects an
         // item or cancels the panel.
         [panel beginWithCompletionHandler:^(NSInteger result){
             if (result == NSFileHandlingPanelOKButton) {
                 NSURL* filePath = [[panel URLs] objectAtIndex:0];
-                
+
                 if (nil == [Helpers enableExecutePermissionsForPath:[filePath path]]) {
                     item.script = [Helpers pathToTextBarScriptPath:[filePath path]];
                     item.isFileScript = YES;
@@ -1652,16 +1652,16 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
 //-------------------------------------------------------------------------//
 - (IBAction)actionSelectActionScriptFile:(id)sender {
     RSTextBarItem* item = [self.textBarItemsController.selectedObjects firstObject];
-    
+
     if (nil != item) {
         NSOpenPanel* panel = [NSOpenPanel openPanel];
-        
+
         // This method displays the panel and returns immediately. The completion handler is called when the user selects an
         // item or cancels the panel.
         [panel beginWithCompletionHandler:^(NSInteger result){
             if (result == NSFileHandlingPanelOKButton) {
                 NSURL* filePath = [[panel URLs] objectAtIndex:0];
-                
+
                 if (nil == [Helpers enableExecutePermissionsForPath:[filePath path]]) {
                     item.actionScript = [Helpers pathToTextBarScriptPath:[filePath path]];
                     item.isFileActionScript = YES;
@@ -1679,30 +1679,30 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
 
 //-------------------------------------------------------------------------//
 - (IBAction)actionRemoveTextBarItem:(id)sender {
-    
+
     NSInteger index = self.textBarItemsController.selectionIndex;
-    
+
     if (0 <= index) {
         [self removeObservers];
-        
+
         // Remove any associations.
         RSTextBarItem* item = [[self.textBarItemsController arrangedObjects] objectAtIndex:index];
         [item enable];
         [item removeStatusBar];
         item.shortcut = nil;
-        
+
         [self.textBarItemsController removeObjectAtArrangedObjectIndex:index];
         [self textBarItemsAltCopy];
         [self.textBarItemsController rearrangeObjects];
-        
+
         NSInteger newIndex = MAX(index-1, 0);
         [self.textBarItemsController setSelectionIndex:newIndex];
-        
+
         [self addObservers];
         [self writePreferences];
-        
+
         [self addOrRemoveMainMenuBar];
-        
+
         // If this was an import, then remove from disk.
         if (item.isFileScript) {
             NSString* scriptPath = [Helpers pathFromTextBarScriptPath:item.script];
@@ -1715,7 +1715,7 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
                 }
             }
         }
-        
+
         [NSAnimationContext runAnimationGroup:^(NSAnimationContext *context){
             context.allowsImplicitAnimation = YES;
             [self.textBarItems2Table scrollRowToVisible:newIndex];
@@ -1725,25 +1725,25 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
 
 //-------------------------------------------------------------------------//
 -(void)addTextBarItemToUI:(RSTextBarItem*)item {
-    
+
     [self removeObservers];
-    
+
     NSInteger index = ((NSArray*)self.textBarItemsController.arrangedObjects).count;
     [self addTextBarItemInternal:item];
     [self.textBarItemsController rearrangeObjects];
     [self.textBarItemsController setSelectionIndex:index];
-    
+
     [self addObservers];
     //[self textBarItemsAltCopy];
     [self writePreferences];
-    
+
     [self addOrRemoveMainMenuBar];
-    
+
     [NSAnimationContext runAnimationGroup:^(NSAnimationContext *context){
         context.allowsImplicitAnimation = YES;
         [self.textBarItems2Table scrollRowToVisible:index];
     } completionHandler:NULL];
-    
+
     // RichS: Because addObject doesnt happen until the next run loop, I believe, we need to do the selection after a little delay.
     //    double delayInSeconds = 0.5f;
     //    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
@@ -1766,7 +1766,7 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
 //-------------------------------------------------------------------------//
 - (IBAction)actionOpenScriptFileFolder:(id)sender {
     RSTextBarItem* item = [self.textBarItemsController.selectedObjects firstObject];
-    
+
     if (nil != item && item.isFileScript) {
         NSString* scriptPath = [[Helpers pathFromTextBarScriptPath:item.script] stringByDeletingLastPathComponent];
         if (![NSString isEmpty:scriptPath]) {
@@ -1779,7 +1779,7 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
 //-------------------------------------------------------------------------//
 - (IBAction)actionOpenActionScriptFileFolder:(id)sender {
     RSTextBarItem* item = [self.textBarItemsController.selectedObjects firstObject];
-    
+
     if (nil != item && item.isFileActionScript) {
         NSString* actionScriptPath = [[Helpers pathFromTextBarScriptPath:item.actionScript] stringByDeletingLastPathComponent];
         if (![NSString isEmpty:actionScriptPath]) {
@@ -1798,7 +1798,7 @@ static const NSTouchBarItemIdentifier kTextBarIdentifier = @"com.RichSomerfield.
 //    NSString* cellIdentifier = tableColumn.identifier;
 //    if ([cellIdentifier isEqualToString:@"ItemsCell"]) {
 //        RSTextBarItem* item = [self.textBarItems objectAtIndex:row];
-//        
+//
 //        RSTextBarItemTableCellView* cell = [tableView makeViewWithIdentifier:@"ItemsCell" owner:self];
 //        cell.cellEnabledButton.state = item.isEnabled;
 //        cell.cellTitleField.stringValue = item.script;
